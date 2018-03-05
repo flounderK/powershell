@@ -6,7 +6,10 @@ function Get-SubnetOSInstallDate{
         [Parameter(Mandatory=$true, position=1)]
         $2,
         [Parameter(Mandatory=$true, position=2)]
-        $3
+        $3,
+        [Parameter(Mandatory=$false)]
+        [switch]
+        $keep_all_hosts_in_output=$false
 
     )
     $ErrorActionPreference = 'SilentlyContinue'
@@ -31,8 +34,11 @@ function Get-SubnetOSInstallDate{
         }
         catch [System.Management.Automation.RuntimeException] {
             if($Error[0].Exception.Message -eq "You cannot call a method on a null-valued expression."){
-                Write-Verbose -Message "DNS resolves to host but host is not available. Removing from output"
-                Continue
+                Write-Verbose -Message "DNS resolves to host but host is not available"
+                if(not $keep_all_hosts_in_output){
+                    Write-Verbose -Message "Removing $hostname from output"
+                    Continue
+                }
             }
         }
         $ComputerName = $comp.hostname -replace "\.[a-zA-Z]+\.[a-zA-Z]+$",""
