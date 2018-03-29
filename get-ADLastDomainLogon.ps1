@@ -1,14 +1,34 @@
-       
-    [cmdletbinding()]
-    param(
-        [Parameter(Mandatory=$true, Position=0)]
-        [Alias("ID")]
-        [string]$Identity,
-        [Parameter(Mandatory=$false)]
-        $timeout=30,
-        [Parameter(Mandatory=$false)]
-        [switch]$DisableTimeOut=$false
-        )
+<#
+    .SYNOPSIS
+        Querys all of the domain controllers in your current domain to see when the last domain login for a particular user was
+
+    .DESCRIPTION
+        Querys all of the domain controllers in your current domain to see when the last domain login for a particular user was. Most domains have Domain Controllers that sync up, but sometimes 
+        synching up can take way too long. 
+
+    .PARAMETER Identity
+        The AD username that you are querying on the domain controllers
+
+    .PARAMETER timeout
+        A timeout for the queries
+
+    .PARAMETER DisableTimeOut
+        Ignore the timeout setting, let the script take its time. (Note, The script will only finish once all jobs have a Completed or Failed state)
+#>
+<#
+    TODO: Add in optional configuration file parsing to ignore domain controllers consistently
+#>
+
+[cmdletbinding()]
+param(
+    [Parameter(Mandatory=$true, Position=0)]
+    [Alias("ID")]
+    [string]$Identity,
+    [Parameter(Mandatory=$false)]
+    $timeout=30,
+    [Parameter(Mandatory=$false)]
+    [switch]$DisableTimeOut=$false
+    )
 
     Function UserExists{              
         [cmdletbinding()]
