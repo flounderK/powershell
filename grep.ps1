@@ -19,6 +19,9 @@ $c=$false
 )
 begin{
     $result = @()
+    if($f -ne $null){
+        $blob = Get-Content -Path $f
+    }
 }
 process{
     if($P -eq $true){
