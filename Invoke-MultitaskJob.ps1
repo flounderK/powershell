@@ -50,7 +50,7 @@ foreach($Computername in $computers){
 Write-Verbose "All Jobs started"
 
 Write-Verbose "All Jobs finished"
-$resultset += ($jobs| Receive-Job)|Where-Object {$_ -ne $null}
+$resultset += Job-Check -jobs $jobs
 Get-Job | Remove-Job -Force
 return $resultset
 
