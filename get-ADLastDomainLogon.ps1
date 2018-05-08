@@ -43,12 +43,13 @@ begin{
     }
 
 
-    if((UserExists $identity) -eq $false){return "User Does Not exist"}
+    
     $domainsid = (get-addomain).domainsid
     $DCs = get-adgroup -Identity "$domainsid-516" | get-adgroupmember -recursive | select -ExpandProperty name
 }
 
 process{
+    if((UserExists $identity) -eq $false){return "User $Identity Does Not exist"}
     $Jobs = @()
     $gatherers = @()
     foreach($DC in $DCs){
@@ -85,9 +86,9 @@ process{
     $finished_job_limit = $jobs.count
 
     while(-not $jobs_finished){
-        Write-Verbose "Waiting on $($jobs.count) jobs"
-        start-sleep -milliseconds 500
         $finished_job_count = 0
+
+        start-sleep -milliseconds 500
         foreach($obj in $Jobs){
             if($obj.state -eq [System.Management.Automation.JobState]::Completed){
                 $finished_job_count = $finished_job_count + 1
@@ -96,6 +97,8 @@ process{
         if ($finished_job_count -eq $finished_job_limit){
             $jobs_finished = $true
         }
+        $verbose_display_Job = $finished_job_limit - $finished_job_count
+        Write-Verbose "Waiting on $verbose_display_Job jobs"
     }
     $Result_set = @()
     foreach($obj in $Jobs){
