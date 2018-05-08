@@ -101,7 +101,7 @@ process{
     foreach($obj in $Jobs){
         $server = $obj.Name
         $result_data = ($obj | Receive-Job) |Where-Object {$_ -ne $null}
-        $Result_set += New-Object PSObject -Property @{Server=$server;LastLogon=$result_data}
+        $Result_set += New-Object PSObject -Property @{Server=$server;LastLogon=$result_data;Identity=$Identity}
     
     }
     #$Result_set
