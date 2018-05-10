@@ -66,19 +66,7 @@ process{
                 }
                 Write-Verbose "Starting query to $DC"
                 $job = Start-Job -ScriptBlock $Code -ArgumentList $Identity, $DC -Name $DC
-                $Jobs += $job
-                #from https://powershell.org/forums/topic/self-terminating-jobs-in-powershell/
-                $null = Register-ObjectEvent $job -EventName StateChanged -Action {
-
-                    if (($eventArgs.JobStateInfo.state -eq [System.Management.Automation.JobState]::Completed) -and ($sender.HasMoreData -eq $false)){
-                        # This command removes the original job
-                        $sender | Remove-Job -Force
-                        # These commands remove the event registration
-                        $eventSubscriber | Unregister-Event -Force
-                        $eventSubscriber.Action | Remove-Job -Force    
-                    }
-                }
-            
+                $Jobs += $job        
     }
     write-verbose "Jobs Started"
     $jobs_finished = $false
@@ -107,6 +95,7 @@ process{
         $Result_set += New-Object PSObject -Property @{Server=$server;LastLogon=$result_data;Identity=$Identity}
     
     }
+    $Jobs|Remove-Job -Force
     #$Result_set
     $most_recent = ($Result_set | Sort-Object -Descending -Property LastLogon)[0]
     $most_recent.LastLogon = ($most_recent.LastLogon | ToReadableTime).datetime
