@@ -6,8 +6,11 @@
         Querys all of the domain controllers in your current domain to see when the last domain login for a particular user was. Most domains have Domain Controllers that sync up, but sometimes 
         synching up can take way too long. 
 
-    .PARAMETER Identity
+    .PARAMETER UserName
         The AD username that you are querying on the domain controllers
+    
+    .PARAMETER Identity
+        The Identity of the Active Directory domain
 
 #>
 <#
@@ -15,19 +18,39 @@
 #>
 [cmdletbinding()]
 param(
-[Parameter(Mandatory=$true,ValueFromPipeline=$true)]
-$Identity
+    [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+    [string]
+    $UserName,
+
+    [Parameter(Mandatory=$False)]
+    [string]
+    $Identity,
+
+    [Parameter(Mandatory=$False)]
+    [string]
+    $Server,
+
+    [pscredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+    [Microsoft.ActiveDirectory.Management.ADAuthType]
+    ${AuthType}
 )
 begin{
     Import-Module ActiveDirectory
     Function UserExists{              
         [cmdletbinding()]
         param (
-        [Parameter(Mandatory=$true)]
-        [string]$uname
+        [Parameter(Mandatory=$true, Position=0)]
+        [string]
+        $uname,
+        [Parameter(Mandatory=$true, Position=1)]
+        [string]
+        $Server
         ) 
         [bool]$result=$false
-        if(dsquery user -samid $uname){ $result=$true}
+        if(Get-ADUser -Identity $uname -Server $Server){ $result=$true}
         else{$result=$false}
         return $result
     }
@@ -42,22 +65,31 @@ begin{
         }
     }
 
-
     
-    $domainsid = (get-addomain).domainsid
-    $DCs = get-adgroup -Identity "$domainsid-516" | get-adgroupmember -recursive | select -ExpandProperty name
+    #allow get-addomain to use the parameters from above
+    $PSBoundParameters.Remove('UserName')
+    $domain = Get-ADDomain @PSBoundParameters
+    $domainsid = $Domain.domainsid
+    #$DCs = $domain.ReplicaDirectoryServers
+    if ($Server){
+        $DCgroup = get-adgroup -Identity "$domainsid-516" -Server $Server
+    }else{
+        $DCgroup = Get-ADGroup -Identity "$domainsid-516"
+    }
+    $DCs = $DCgroup | get-adgroupmember -recursive | select -ExpandProperty name
+    #>
 }
 
 process{
-    if((UserExists $identity) -eq $false){return "User $Identity Does Not exist"}
+    if((UserExists -uname $UserName -Server $env:LOGONSERVER.Replace("\\","")) -eq $false){return "User $UserName Does Not exist"}
     $Jobs = @()
     $gatherers = @()
     foreach($DC in $DCs){
                 $Code = {
             
-                    param($Identity,$DC)
+                    param($UserName,$DC)
                     try{
-                        $Query = (Get-ADUser -Identity $Identity -Properties LastLogon -Server $DC -ErrorAction SilentlyContinue).lastlogon
+                        $Query = (Get-ADUser -Identity $UserName -Properties LastLogon -Server $DC -ErrorAction SilentlyContinue).lastlogon
 
                     }catch [Microsoft.ActiveDirectory.Management.ADServerDownException]{
                         $Query = ([datetime]"1-1-1990").tofiletime()
@@ -65,7 +97,7 @@ process{
                     return $Query
                 }
                 Write-Verbose "Starting query to $DC"
-                $job = Start-Job -ScriptBlock $Code -ArgumentList $Identity, $DC -Name $DC
+                $job = Start-Job -ScriptBlock $Code -ArgumentList $UserName, $DC -Name $DC
                 $Jobs += $job        
     }
     write-verbose "Jobs Started"
@@ -92,7 +124,7 @@ process{
     foreach($obj in $Jobs){
         $server = $obj.Name
         $result_data = ($obj | Receive-Job) |Where-Object {$_ -ne $null}
-        $Result_set += New-Object PSObject -Property @{Server=$server;LastLogon=$result_data;Identity=$Identity}
+        $Result_set += New-Object PSObject -Property @{Server=$server;LastLogon=$result_data;Identity=$UserName}
     
     }
     $Jobs|Remove-Job -Force
