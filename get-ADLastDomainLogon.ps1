@@ -12,6 +12,9 @@
     .PARAMETER Identity
         The Identity of the Active Directory domain
 
+    .PARAMETER Server
+        Server to connect to for initial data gathering
+
 #>
 <#
     TODO: Add in optional configuration file parsing to ignore domain controllers consistently
